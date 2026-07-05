@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>maczo — Lucky Spin Provably-Fair Verifier</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+         background: #0e0b1a; color: #eee; line-height: 1.55; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 28px 18px 60px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: #9a93b5; font-size: 14px; margin: 0 0 24px; }
+  .card { background: #17132b; border: 1px solid #2a2350; border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+  label { display: block; font-size: 13px; font-weight: 700; color: #b8b0d8; margin: 12px 0 5px; }
+  input, textarea { width: 100%; padding: 10px 12px; border-radius: 9px; border: 1px solid #342c60;
+         background: #0f0c20; color: #fff; font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  textarea { min-height: 96px; resize: vertical; }
+  button { margin-top: 16px; width: 100%; padding: 14px; border: none; border-radius: 11px; cursor: pointer;
+         background: linear-gradient(135deg,#7c3aed,#db2777); color: #fff; font-size: 16px; font-weight: 800; }
+  button.sec { background: #241d47; margin-top: 8px; font-size: 14px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1 1 160px; }
+  .res { margin-top: 18px; padding: 16px; border-radius: 12px; font-size: 15px; display: none; }
+  .res.ok { background: rgba(48,209,88,.12); border: 1px solid rgba(48,209,88,.4); }
+  .res.bad { background: rgba(255,69,58,.12); border: 1px solid rgba(255,69,58,.5); }
+  .res .big { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+  .mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; word-break: break-all; }
+  .muted { color: #9a93b5; font-size: 13px; }
+  code { background: #0f0c20; padding: 1px 5px; border-radius: 5px; font-size: 12px; }
+  details { margin-top: 10px; } summary { cursor: pointer; font-weight: 700; color: #b8b0d8; }
+  .steps li { margin-bottom: 6px; }
+  a { color: #c9a0ff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎡 Lucky Spin — Provably-Fair Verifier</h1>
+  <p class="sub">100% offline. Nothing leaves your browser — view source to confirm. Reproduces maczo's exact
+     server algorithm from your revealed seeds.</p>
+
+  <div class="card">
+    <label>Server Seed (revealed — after you "Rotate" on the Lucky Spin page)</label>
+    <input id="server" placeholder="e.g. 4583aafe22399f36ab7cb57944824b1916e4f351072772c56ec7ec976dd78f61" />
+
+    <label>Server Seed Hash / Commitment (shown BEFORE you spun — optional but recommended)</label>
+    <input id="commit" placeholder="e.g. 8ecf55c927bfaaf8883d1ced695cda86ab85f65abb315cc8eee5aecfae071e9c" />
+
+    <div class="row">
+      <div>
+        <label>Client Seed</label>
+        <input id="client" placeholder="your client seed" />
+      </div>
+      <div>
+        <label>Nonce (the spin number, 0-based)</label>
+        <input id="nonce" type="number" min="0" value="0" />
+      </div>
+    </div>
+
+    <label>Wheel Segments — weight&gt;0, in prize-table order (JSON)</label>
+    <textarea id="weights" placeholder='[{"value":0.1,"weight":300},{"value":0.2,"weight":250}, ...]'></textarea>
+
+    <button id="go">Verify spin</button>
+    <button class="sec" id="demo">Load demo values</button>
+
+    <div id="res" class="res"></div>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>How it works</summary>
+      <p class="muted">Every Lucky Spin outcome is fixed by a value we commit to <b>before</b> you spin:</p>
+      <ol class="steps muted">
+        <li><b>Commitment.</b> Before your first spin the site shows <code>SHA-256(serverSeed)</code>. The seed
+            stays secret, but this hash proves it already existed and can't be swapped later.</li>
+        <li><b>Outcome.</b> For each spin: <code>HMAC-SHA256(serverSeed, "clientSeed:nonce:cursor")</code> →
+            read 8-byte big-endian words → <b>rejection sampling</b> over the total weight (removes modulo bias)
+            → cumulative-weight walk → the winning segment.</li>
+        <li><b>Reveal.</b> When you "Rotate" the seed on the Lucky Spin page, the site reveals the original
+            <code>serverSeed</code>. Paste it here with your client seed and each nonce to reproduce every spin,
+            and confirm <code>SHA-256(serverSeed)</code> equals the commitment you saw earlier.</li>
+      </ol>
+      <p class="muted">Cross-check this page against the official Node reference (<code>verify.js --selftest</code>)
+         and the published <code>test-vectors.json</code>. Same algorithm as the server (<code>ProvablyFairWheel</code>).</p>
+    </details>
+  </div>
+</div>
+
+<script>
+"use strict";
+const enc = new TextEncoder();
+
+async function sha256Hex(str) {
+  const d = await crypto.subtle.digest("SHA-256", enc.encode(str));
+  return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function hmacSha256(keyStr, msgStr) {
+  const key = await crypto.subtle.importKey("raw", enc.encode(keyStr), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(msgStr));
+  return new Uint8Array(sig); // 32 bytes
+}
+// Identical logic to verify.js / ProvablyFairWheel.cs (BigInt uint64).
+async function selectSegmentIndex(server, client, nonce, weights) {
+  let total = 0n;
+  for (const w of weights) { const b = BigInt(w); if (b < 0n) throw new Error("weight < 0"); total += b; }
+  if (total <= 0n) throw new Error("total weight must be > 0");
+  if (weights.length === 1) return 0;
+  const MAX = (1n << 64n) - 1n, limit = MAX - (MAX % total);
+  for (let cursor = 0; cursor < 1024; cursor++) {
+    const h = await hmacSha256(server, client + ":" + nonce + ":" + cursor);
+    for (let off = 0; off + 8 <= h.length; off += 8) {
+      let word = 0n;
+      for (let b = 0; b < 8; b++) word = (word << 8n) | BigInt(h[off + b]);
+      if (word >= limit) continue;
+      const pick = word % total;
+      let acc = 0n;
+      for (let i = 0; i < weights.length; i++) { acc += BigInt(weights[i]); if (pick < acc) return i; }
+      return weights.length - 1;
+    }
+  }
+  throw new Error("entropy exhausted");
+}
+
+const $ = id => document.getElementById(id);
+$("demo").onclick = () => {
+  $("server").value = "4583aafe22399f36ab7cb57944824b1916e4f351072772c56ec7ec976dd78f61";
+  $("commit").value = "8ecf55c927bfaaf8883d1ced695cda86ab85f65abb315cc8eee5aecfae071e9c";
+  $("client").value = "maczo_demo_client";
+  $("nonce").value = "0";
+  $("weights").value = JSON.stringify(
+    [{value:0.1,weight:300},{value:0.2,weight:250},{value:0.5,weight:150},
+     {value:1,weight:80},{value:2,weight:30},{value:5,weight:10},{value:20,weight:1}]);
+};
+
+async function runVerify() {
+  const res = $("res"); res.style.display = "block"; res.className = "res";
+  try {
+    const server = $("server").value.trim();
+    const commit = $("commit").value.trim();
+    const client = $("client").value.trim();
+    const nonce = parseInt($("nonce").value, 10);
+    const segs = JSON.parse($("weights").value);
+    if (!server || !client || !Array.isArray(segs) || isNaN(nonce)) throw new Error("Fill in server seed, client seed, nonce and a segments JSON array.");
+    const weights = segs.map(s => typeof s === "object" ? Number(s.weight) : Number(s));
+    const calcCommit = await sha256Hex(server);
+    const commitOk = !commit || calcCommit.toLowerCase() === commit.toLowerCase();
+    const idx = await selectSegmentIndex(server, client, nonce, weights);
+    const seg = segs[idx];
+    const prize = seg && typeof seg === "object" ? seg.value : idx;
+    res.className = "res " + (commitOk ? "ok" : "bad");
+    res.innerHTML =
+      `<div class="big">${commitOk ? "✅" : "❌"} Segment #${idx}${(seg && seg.value !== undefined) ? ` — ${seg.value} MC` : ""}</div>` +
+      `<div class="muted">Commitment: ${commit ? (commitOk ? "✅ matches" : "❌ MISMATCH — seed does not hash to the commitment!") : "(not provided)"}</div>` +
+      `<div class="mono" style="margin-top:8px">SHA-256(serverSeed) = ${calcCommit}</div>`;
+  } catch (e) {
+    res.className = "res bad";
+    res.innerHTML = `<div class="big">⚠️ ${e.message}</div>`;
+  }
+}
+$("go").onclick = runVerify;
+
+// Auto-fill + auto-compute from URL query — makes deep-links from the site compute instantly.
+// ?server=&commit=&client=&nonce=&w=<URL-encoded JSON weights>  (alias: weights)
+(function () {
+  const p = new URLSearchParams(location.search);
+  const set = (id, key) => { const v = p.get(key); if (v != null) $(id).value = v; };
+  set("server", "server"); set("commit", "commit"); set("client", "client"); set("nonce", "nonce");
+  const w = p.get("w") || p.get("weights");
+  if (w) { try { $("weights").value = JSON.stringify(JSON.parse(w)); } catch { $("weights").value = w; } }
+  if (p.get("server") || w) runVerify(); // compute immediately when a link carries the spin data
+})();
+</script>
+</body>
+</html>
