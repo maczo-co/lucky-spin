@@ -21,7 +21,7 @@ function of three values you can inspect.
 | **Nonce** | server counter, +1 per spin | shown for each spin |
 
 ## Try the verifier now
-- **Live (offline in your browser):** https://maczo-co.github.io/lucky-spin/
+- **Live (offline in your browser):** https://verify.maczo.co/
 - **Source / Node CLI:** https://github.com/maczo-co/lucky-spin
 
 Every **Verify ↗** link in your spin history on maczo.co opens the verifier pre-filled with that

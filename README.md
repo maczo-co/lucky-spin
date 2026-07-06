@@ -49,11 +49,11 @@ cumulative segment weights to land on one segment.
 4. Reproduce each spin's segment from `(serverSeed, clientSeed, nonce, weights)`.
 
 ### Browser (offline)
-Live at **https://maczo-co.github.io/lucky-spin/** — or open [`index.html`](./index.html) locally (double-click,
+Live at **https://verify.maczo.co/** — or open [`index.html`](./index.html) locally (double-click,
 no server, no internet). Paste your values, press **Verify spin**. View source to confirm nothing is sent anywhere.
 
 The Lucky Spin page links here with your spin data pre-filled so it computes instantly, e.g.
-`https://maczo-co.github.io/lucky-spin/?server=…&commit=…&client=…&nonce=0&w=<segments>`.
+`https://verify.maczo.co/?server=…&commit=…&client=…&nonce=0&w=<segments>`.
 
 ### Node.js (zero dependencies)
 ```bash

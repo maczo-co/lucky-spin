@@ -19,11 +19,11 @@ embedded automatically in the site's **Verify ↗** links.
 
 On maczo.co open **Lucky Spin → Spin history & verify**, press **Rotate seed** to reveal the server
 seed, then click **Verify ↗** next to any spin. It opens
-https://maczo-co.github.io/lucky-spin/ with everything filled in and computes instantly.
+https://verify.maczo.co/ with everything filled in and computes instantly.
 
 ## Method 2 — Browser, manual
 
-1. Open https://maczo-co.github.io/lucky-spin/ (or `index.html` from the repo — works fully offline).
+1. Open https://verify.maczo.co/ (or `index.html` from the repo — works fully offline).
 2. Paste **Server Seed**, **Commitment**, **Client Seed**, **Nonce**, and the **weights** JSON.
 3. Press **Verify spin**. You'll see:
    - ✅/❌ whether `SHA-256(serverSeed)` matches the commitment

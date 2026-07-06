@@ -5,5 +5,5 @@
 - [FAQ](FAQ)
 
 ---
-- [🧮 Live verifier](https://maczo-co.github.io/lucky-spin/)
+- [🧮 Live verifier](https://verify.maczo.co/)
 - [💻 Source code](https://github.com/maczo-co/lucky-spin)
