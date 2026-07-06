@@ -123,14 +123,20 @@ async function selectSegmentIndex(server, client, nonce, weights) {
 }
 
 const $ = id => document.getElementById(id);
+
+// maczo's current Lucky Spin segments (weight>0, prize-table order) — same data as weights.maczo.json.
+// Pre-filled as the default so the verifier reproduces real spins out of the box.
+const MACZO_WEIGHTS = [{"value":0.1,"weight":1000},{"value":0.1,"weight":1000},{"value":0.1,"weight":1000},{"value":0.1,"weight":1000},{"value":0.1,"weight":1000},{"value":0.1,"weight":1000},{"value":0.1,"weight":1000},{"value":0.1,"weight":1000},{"value":0.1,"weight":1000},{"value":0.1,"weight":1000},{"value":0.2,"weight":700},{"value":0.2,"weight":700},{"value":0.2,"weight":700},{"value":0.2,"weight":700},{"value":0.2,"weight":700},{"value":0.2,"weight":700},{"value":0.2,"weight":700},{"value":0.2,"weight":700},{"value":0.3,"weight":450},{"value":0.3,"weight":450},{"value":0.3,"weight":450},{"value":0.3,"weight":450},{"value":0.3,"weight":450},{"value":0.3,"weight":450},{"value":0.5,"weight":250},{"value":0.5,"weight":250},{"value":0.5,"weight":250},{"value":0.5,"weight":250},{"value":0.5,"weight":250},{"value":1.0,"weight":100},{"value":1.0,"weight":100},{"value":1.0,"weight":100},{"value":1.0,"weight":100},{"value":2.0,"weight":35},{"value":2.0,"weight":35},{"value":2.0,"weight":35},{"value":5.0,"weight":8},{"value":5.0,"weight":8},{"value":10.0,"weight":2},{"value":20.0,"weight":1}];
+
+// default-fill the segments box (URL ?w= overrides below)
+$("weights").value = JSON.stringify(MACZO_WEIGHTS);
+
 $("demo").onclick = () => {
   $("server").value = "4583aafe22399f36ab7cb57944824b1916e4f351072772c56ec7ec976dd78f61";
   $("commit").value = "8ecf55c927bfaaf8883d1ced695cda86ab85f65abb315cc8eee5aecfae071e9c";
   $("client").value = "maczo_demo_client";
   $("nonce").value = "0";
-  $("weights").value = JSON.stringify(
-    [{value:0.1,weight:300},{value:0.2,weight:250},{value:0.5,weight:150},
-     {value:1,weight:80},{value:2,weight:30},{value:5,weight:10},{value:20,weight:1}]);
+  $("weights").value = JSON.stringify(MACZO_WEIGHTS);
 };
 
 async function runVerify() {
